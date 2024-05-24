@@ -1,0 +1,39 @@
+QPushButton { color: white;
+    font-size: 14pt;
+    font-family: '平方 常规';
+    height: 40px;
+    min-width: 120px;
+    /* border: 1px solid #8f8f91; */
+    border-radius: 6px;
+    padding: 5px 10px;
+    background-color: #4bd884;
+}
+
+#btnLoadFile {
+   qproperty-icon: url(:/images/disk.png);
+    qproperty-iconSize: 24px 24px;
+}
+#btnDownLoad {
+   qproperty-icon: url(:/images/download.png);
+    qproperty-iconSize: 24px 24px;
+}
+
+QPushButton:hover {
+    background-color: #37a463;
+}
+QPushButton:pressed {
+    background-color: #279352;
+    border: 1px solid gray;
+}
+#labFileInfo {
+    height: 40px;
+    font-size:12pt;
+    min-width: 400px;
+    border: 1px solid #8f8f91;
+    border-radius: 6px;
+    padding: 5px;
+    background-color: #fafafa;
+}
+#plainTextEdit {
+    font: 12pt "JetBrainsMono NF";
+}

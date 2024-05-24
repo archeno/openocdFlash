@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>styles/main.qss</file>
+        <file>images/disk.png</file>
+        <file>images/download.png</file>
+        <file>config/cmsis-dap.cfg</file>
+        <file>images/flash.png</file>
+    </qresource>
+</RCC>
