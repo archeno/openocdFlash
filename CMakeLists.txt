@@ -34,12 +34,13 @@ if(ANDROID)
     mainwindow.ui
   )
 else()
-  add_executable(openocdFlash
+  add_executable(openocdFlash WIN32
     main.cpp
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
     res.qrc
+    myapp.rc
   )
 endif()
 
