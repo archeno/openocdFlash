@@ -22,9 +22,17 @@ private slots:
     void on_btnDownLoad_clicked();
     void dealError(QProcess::ProcessError error);
 
+    void on_combDebuggerType_currentTextChanged(const QString &arg1);
+
+    void on_combMcuSelect_currentTextChanged(const QString &arg1);
+
+    void on_btnClearText_clicked();
+
 private:
     Ui::MainWindow *ui;
     QString m_fileName;
+    QString m_buggerCofigType;
+    QString m_mcuType;
     QProcess *myprocess;
 };
 #endif // MAINWINDOW_H
