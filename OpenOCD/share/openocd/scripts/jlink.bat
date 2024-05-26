@@ -1,0 +1,1 @@
+openocd -f "target/01jlink_swd.cfg" -c "program flash_files/%1 %2" -c "reset" -c "shutdown"
