@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 4.11.1, 2024-05-26T22:46:21. -->
+<!-- Written by QtCreator 4.11.1, 2024-05-28T00:02:28. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -328,7 +328,7 @@
     <value type="bool" key="RunConfiguration.UseQmlDebugger">false</value>
     <value type="bool" key="RunConfiguration.UseQmlDebuggerAuto">true</value>
     <value type="QString" key="RunConfiguration.WorkingDirectory"></value>
-    <value type="QString" key="RunConfiguration.WorkingDirectory.default">D:/02_Project/qt/my_qt_examples/build-openocdFlash-Desktop_Qt_5_14_2_MinGW_64_bit-Release</value>
+    <value type="QString" key="RunConfiguration.WorkingDirectory.default">D:/msys64/home/Administrator/repo/qt_project/build-openocdFlash-Desktop_Qt_5_14_2_MinGW_64_bit-Release</value>
    </valuemap>
    <value type="int" key="ProjectExplorer.Target.RunConfigurationCount">1</value>
   </valuemap>
