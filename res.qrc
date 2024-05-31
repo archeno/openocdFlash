@@ -6,6 +6,6 @@
         <file>config/cmsis-dap.cfg</file>
         <file>images/flash.png</file>
         <file>images/clear.png</file>
-        <file>appconfig.json</file>
+        <file>images/downarrow.png</file>
     </qresource>
 </RCC>

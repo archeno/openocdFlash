@@ -3,6 +3,7 @@
 #include "versionConfig.h"
 #include <cJSON/cJSON.h>
 #include <QComboBox>
+#include <QCompleter>
 #include <QDebug>
 #include <QFileDialog>
 #include <QJsonDocument>
@@ -88,7 +89,7 @@ void MainWindow::setDefaultConfig()
 }
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow), myprocess(new QProcess(this)),
-      m_binAddrLoayout(nullptr)
+      m_binAddr("0x08000000")
 {
     ui->setupUi(this);
     m_buggerCofigType = ui->combDebuggerType->currentText().toLower() + ".cfg";
@@ -97,8 +98,21 @@ MainWindow::MainWindow(QWidget *parent)
     connect(myprocess, &QProcess::readyReadStandardOutput, this, &MainWindow::readProcessOutput);
     connect(myprocess, &QProcess::readyReadStandardError, this, &MainWindow::readProcessOutput);
     connect(myprocess, &QProcess::errorOccurred, this, &MainWindow::dealError);
-    //    createJsonObj();
+    connect(this, &MainWindow::filetypeTobeDownloadChanged, this, &MainWindow::on_fileTypeChanged);
+
+    ui->combMcuSelect->setEditable(true);
+    ui->combMcuSelect->setMinimumWidth(200);
+    ui->combMcuSelect->setEditText("Select Mcu...");
+    QStringList mcuList;
+    mcuList << "stm32f1x"
+            << "stm32f3x"
+            << "stm32f4x";
+    QCompleter *mcuSelectCompleter = new QCompleter(mcuList, ui->combMcuSelect);
+    mcuSelectCompleter->setCaseSensitivity(Qt::CaseInsensitive);
+    mcuSelectCompleter->setFilterMode(Qt::MatchContains);
+    ui->combMcuSelect->setCompleter(mcuSelectCompleter);
 }
+
 MainWindow::~MainWindow()
 {
     saveJsfile();
@@ -125,6 +139,7 @@ void MainWindow::readProcessOutput()
 
 void MainWindow::on_btnLoadFile_clicked()
 {
+    static QString fileNameLast;
     QString fileName
         = QFileDialog::getOpenFileName(this,
                                        tr("Open File"),
@@ -132,28 +147,12 @@ void MainWindow::on_btnLoadFile_clicked()
                                        tr("bin文件 (*.bin);; elf文件(*.elf);;所有文件(*.*)"));
     if (!fileName.isEmpty()) {
         ui->labFileInfo->setText(fileName);
-        m_fileName = fileName;
-
-        //根据文件类型选择是否加载bin起始地址 LineEdit控件
-        QFileInfo fileinfo(m_fileName);
-        QString bin_type = fileinfo.suffix();
-        if (bin_type == "bin") {
-            if (m_binAddrLoayout == nullptr) {
-                m_binAddrLoayout = new QHBoxLayout();
-                QLabel *labBinAddr = new QLabel("bin起始地址");
-                QLineEdit *editBinAddr = new QLineEdit("0x08000000");
-                m_binAddrLoayout->addWidget(labBinAddr);
-                m_binAddrLoayout->addWidget(editBinAddr);
-                QSpacerItem *item = new QSpacerItem(40,
-                                                    40,
-                                                    QSizePolicy::Expanding,
-                                                    QSizePolicy::Fixed);
-                m_binAddrLoayout->addSpacerItem(item);
-                int insertIndex = ui->verticalLayout->indexOf(ui->btnDownLoad);
-                qDebug() << "index" << insertIndex;
-                ui->verticalLayout->insertLayout(2, m_binAddrLoayout);
-            }
-        } else {
+        QFileInfo fileInfo(fileName);
+        m_fileName = fileInfo.suffix();
+        if (fileName != fileNameLast) {
+            fileNameLast = fileName;
+            //发射信号 文件类型更改
+            emit filetypeTobeDownloadChanged(m_fileName);
         }
     } else {
     }
@@ -161,39 +160,17 @@ void MainWindow::on_btnLoadFile_clicked()
 
 void MainWindow::on_btnDownLoad_clicked()
 {
-    QString program = "openocd.exe";
+    QString program = "OpenOCD/bin/openocd.exe";
     QString cfgInterfacePath = "OpenOCD/share/openocd/scripts/interface/" + m_buggerCofigType;
     QString TargetPath = "OpenOCD/share/openocd/scripts/target/" + m_mcuType;
     QStringList arguments;
-    //    arguments << "www.baidu.com";
-    //    myprocess->setWorkingDirectory("D:\\DevelopmentTools\\OpenOCD\\bin\\openocd.exe");
     arguments << "-f" << cfgInterfacePath << "-f" << TargetPath << "-c"
-              << QString("program %1 0x08000000 verify reset exit").arg(m_fileName);
+              << QString("program %1 %2 verify reset exit").arg(m_fileName).arg(m_binAddr);
     qDebug() << "Command:" << program;
     qDebug() << "arguments:" << arguments;
     qDebug() << "Working Directory:" << myprocess->workingDirectory();
     QFileInfo checkFile(program);
-    //    if (!checkFile.exists() || !checkFile.isExecutable()) {
-    //        qDebug() << "The command path is invalid or not executable.";
-    //        return;
-    //    }
     myprocess->start(program, arguments);
-    //    myprocess->waitForStarted();
-    //    myprocess->waitForFinished();
-    //    myprocess->waitForReadyRead();
-    //    // 输出 OpenOCD 的输出信息
-    //    QByteArray output = myprocess->readAllStandardOutput();
-    //    qDebug() << "std_out: " << QString(output);
-    //    ui->plainTextEdit->appendPlainText("standard output: ");
-    //    ui->plainTextEdit->appendPlainText(output);
-    //    output = myprocess->readAllStandardOutput();
-    //    qDebug() << "std_err: " << QString(output);
-    //    ui->plainTextEdit->appendPlainText("standard_error output: ");
-    //    ui->plainTextEdit->appendPlainText(output);
-    //    output = myprocess->readAll();
-    //    qDebug() << "all: " << QString(output);
-    //    ui->plainTextEdit->appendPlainText("all output: ");
-    //    ui->plainTextEdit->appendPlainText(output);
 }
 
 void MainWindow::dealError(QProcess::ProcessError error)
@@ -215,4 +192,49 @@ void MainWindow::on_combMcuSelect_currentTextChanged(const QString &arg1)
 void MainWindow::on_btnClearText_clicked()
 {
     ui->plainTextEdit->clear();
+}
+void MainWindow::deletelayout(QLayout *layout)
+{
+    QLayoutItem *child;
+    while ((child = layout->takeAt(0)) != nullptr) {
+        if (QWidget *widget = child->widget()) {
+            delete widget;
+        } else if (QLayout *layoutitem = child->layout()) {
+            deletelayout(layoutitem); //递归删除
+        }
+        delete child;
+    }
+    delete layout;
+    layout = nullptr;
+}
+void MainWindow::on_fileTypeChanged(QString fileType)
+{
+    qDebug() << "received signals: filetypechanged, filetype= " << fileType;
+    static QHBoxLayout *binAddrLayout = nullptr;
+    int btnDownloadLayoutIndex;
+    if (fileType == "bin") {
+        binAddrLayout = new QHBoxLayout();
+        QLabel *labBinAddr = new QLabel("bin起始地址:");
+        QLineEdit *editBinAddr = new QLineEdit(m_binAddr);
+        connect(editBinAddr, &QLineEdit::textChanged, [=]() {
+            m_binAddr = editBinAddr->text().trimmed();
+        });
+        editBinAddr->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        QSpacerItem *spaceItem = new QSpacerItem(40,
+                                                 40,
+                                                 QSizePolicy::Expanding,
+                                                 QSizePolicy::Minimum);
+        binAddrLayout->addWidget(labBinAddr);
+        binAddrLayout->addWidget(editBinAddr);
+        binAddrLayout->addItem(spaceItem);
+
+        btnDownloadLayoutIndex = ui->verticalLayout->indexOf(ui->horizontalLayout_2);
+        ui->verticalLayout->insertLayout(btnDownloadLayoutIndex, binAddrLayout);
+    } else {
+        if (binAddrLayout != nullptr) {
+            qDebug() << "begin to delte binAddrlayout";
+            ui->verticalLayout->removeItem(binAddrLayout);
+            deletelayout(binAddrLayout);
+        }
+    }
 }

@@ -19,6 +19,9 @@ public:
     ~MainWindow();
     void readProcessOutput();
 
+signals:
+    void filetypeTobeDownloadChanged(QString filetype);
+
 private slots:
     void on_btnLoadFile_clicked();
 
@@ -31,6 +34,11 @@ private slots:
 
     void on_btnClearText_clicked();
 
+    void on_fileTypeChanged(QString fileType);
+
+private:
+    void deletelayout(QLayout *layout);
+
 private:
     void createJsonObj(void);
     void setDefaultConfig(void);
@@ -40,6 +48,7 @@ private:
 private:
     Ui::MainWindow *ui;
     QString m_fileName;
+    QString m_binAddr;
     QString m_buggerCofigType;
     QString m_mcuType;
     QProcess *myprocess;
