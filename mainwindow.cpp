@@ -102,11 +102,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->combMcuSelect->setEditable(true);
     ui->combMcuSelect->setMinimumWidth(200);
-    ui->combMcuSelect->setEditText("Select Mcu...");
+    ui->combMcuSelect->setEditText("stm32f7x");
+
     QStringList mcuList;
     mcuList << "stm32f1x"
             << "stm32f3x"
-            << "stm32f4x";
+            << "stm32f4x"
+            << "stm32f7x";
     QCompleter *mcuSelectCompleter = new QCompleter(mcuList, ui->combMcuSelect);
     mcuSelectCompleter->setCaseSensitivity(Qt::CaseInsensitive);
     mcuSelectCompleter->setFilterMode(Qt::MatchContains);
@@ -149,8 +151,8 @@ void MainWindow::on_btnLoadFile_clicked()
         ui->labFileInfo->setText(fileName);
         QFileInfo fileInfo(fileName);
         m_fileName = fileInfo.suffix();
-        if (fileName != fileNameLast) {
-            fileNameLast = fileName;
+        if (m_fileName != fileNameLast) {
+            fileNameLast = m_fileName;
             //发射信号 文件类型更改
             emit filetypeTobeDownloadChanged(m_fileName);
         }
