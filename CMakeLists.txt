@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.25)
 
-project(openocdFlash LANGUAGES CXX)
+project(openocdFlash VERSION 1.0.2 LANGUAGES C CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -23,7 +23,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #            ${CMAKE_CURRENT_SOURCE_DIR}/path/to/libssl.so)
 #    endif()
 #endif()
-
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/versionConfig.h.in
+                ${CMAKE_CURRENT_BINARY_DIR}/versionConfig.h)
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 
 if(ANDROID)
@@ -41,7 +42,10 @@ else()
     mainwindow.ui
     res.qrc
     myapp.rc
+    decoder.c
+    decoder.h
   )
+add_subdirectory(cJSON)
 endif()
 
 target_link_libraries(openocdFlash PRIVATE Qt5::Widgets)

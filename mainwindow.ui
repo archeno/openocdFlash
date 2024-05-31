@@ -87,6 +87,11 @@
           <string>stm32f4x</string>
          </property>
         </item>
+        <item>
+         <property name="text">
+          <string>stm32f7x</string>
+         </property>
+        </item>
        </widget>
       </item>
       <item>

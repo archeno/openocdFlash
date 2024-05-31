@@ -1,0 +1,3 @@
+#define APP_VERSION_MAJOR @openocdFlash_VERSION_MAJOR@
+#define APP_VERSION_MINOR @openocdFlash_VERSION_MINOR@
+#define APP_VERSION_PATCH  @openocdFlash_VERSION_PATCH@

@@ -1,8 +1,11 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QHBoxLayout>
+#include <QJsonObject>
 #include <QMainWindow>
 #include <QProcess>
+#include <QString>
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -29,10 +32,18 @@ private slots:
     void on_btnClearText_clicked();
 
 private:
+    void createJsonObj(void);
+    void setDefaultConfig(void);
+    void loadJsfile();
+    void saveJsfile();
+
+private:
     Ui::MainWindow *ui;
     QString m_fileName;
     QString m_buggerCofigType;
     QString m_mcuType;
     QProcess *myprocess;
+    QHBoxLayout *m_binAddrLoayout;
+    QJsonObject m_jsObj;
 };
 #endif // MAINWINDOW_H
