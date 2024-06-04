@@ -52,10 +52,10 @@ QComboBox::down-arrow {
     qproperty-iconSize: 24px 24px;
 }
 QPushButton:hover {
-    background-color: #02b847;
+    background-color: #026c2b;
 }
 QPushButton:pressed {
-    background-color: #02b847;
+    background-color: #01722c;
     border: 1px solid gray;
 }
 QLineEdit {

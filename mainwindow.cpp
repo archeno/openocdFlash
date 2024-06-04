@@ -9,7 +9,9 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QThread>
+#include <QTimer>
 
 #define CONFIG_FILE_NAME "./appconfig.json"
 void MainWindow::loadJsfile()
@@ -35,12 +37,12 @@ void MainWindow::loadJsfile()
         //转换为jsonObj
         if (configdoc.isObject()) {
             m_jsObj = configdoc.object();
-            if (m_jsObj["version2"].isString()) {
+            if (m_jsObj["version"].isString()) {
                 //read value
                 qDebug() << m_jsObj["version"].toString();
-            } else {
-                qDebug() << 'm_jsObj["version2"]' << m_jsObj["version2"].type();
             }
+            //            ui->combDebuggerType->currentText() = m_jsObj["debugerType"].toString();
+            //            ui->combMcuSelect->currentText() = m_jsObj["mcuType"].toString();
         } else {
             qDebug() << "appconfig.js is not object";
         }
@@ -86,14 +88,29 @@ void MainWindow::setDefaultConfig()
     m_jsObj["version"]
         = QString("%1.%2.%3").arg(APP_VERSION_MAJOR).arg(APP_VERSION_MINOR).arg(APP_VERSION_PATCH);
     m_jsObj["url"] = "https://github.com/archeno/openocdFlash.git";
+    m_jsObj["debugerType"] = "cmsis-dap";
+    m_jsObj["mcuType"] = "stm32f4x";
 }
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow), myprocess(new QProcess(this)),
-      m_binAddr("0x08000000")
+    : QMainWindow(parent), ui(new Ui::MainWindow), m_binAddr("0x08000000"),
+      myprocess(new QProcess(this)), m_timerShowDownloadStatus(new QTimer(this))
 {
     ui->setupUi(this);
+    m_timerShowDownloadStatus->setSingleShot(true);
+    connect(m_timerShowDownloadStatus, &QTimer::timeout, [=]() {
+        if (m_downloadFlag == DOWNLOAD_OK) {
+            ui->plainTextEdit->appendHtml(
+                "<h2><font color=\"green\"; font-size=20;>====烧录成功====</font></h2>");
+        } else if (m_downloadFlag == DOWNLOAD_FAILED) {
+            ui->plainTextEdit->appendHtml(
+                "<h2><font color=\"red\"; font-size=20;>====烧录失败！====</font></h2>");
+        }
+    });
+
+    loadJsfile();
+    ui->combDebuggerType->setCurrentText(m_jsObj["debugerType"].toString());
     m_buggerCofigType = ui->combDebuggerType->currentText().toLower() + ".cfg";
-    m_mcuType = ui->combMcuSelect->currentText().toLower() + ".cfg";
+
     resize(1024, 768);
     connect(myprocess, &QProcess::readyReadStandardOutput, this, &MainWindow::readProcessOutput);
     connect(myprocess, &QProcess::readyReadStandardError, this, &MainWindow::readProcessOutput);
@@ -102,7 +119,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->combMcuSelect->setEditable(true);
     ui->combMcuSelect->setMinimumWidth(200);
-    ui->combMcuSelect->setEditText("stm32f7x");
+    ui->combMcuSelect->setCurrentText(m_jsObj["mcuType"].toString());
+    m_mcuType = ui->combMcuSelect->currentText().toLower() + ".cfg";
 
     QStringList mcuList;
     mcuList << "stm32f1x"
@@ -123,38 +141,73 @@ MainWindow::~MainWindow()
 
 void MainWindow::readProcessOutput()
 {
+    //    int downLoadFlag = 0;
     // 输出 OpenOCD 的输出信息
-
+    QString outputStr;
     QByteArray output = myprocess->readAllStandardOutput();
-    if (!output.isEmpty()) {
-        QString outputStr = QString::fromUtf8(output);
-        ui->plainTextEdit->appendPlainText(outputStr);
+    if (output.isEmpty()) {
+        output = myprocess->readAllStandardError();
     }
+    if (!output.isEmpty()) {
+        m_timerShowDownloadStatus->setInterval(200);
+        qDebug() << "--step--" << ++m_step;
+        outputStr = QString::fromUtf8(output);
+        qDebug() << outputStr;
+        QStringList lines = outputStr.split("\r\n");
+        for (const QString &line : lines) {
+            if (line.contains("*")) { // 过滤条件
+                ui->plainTextEdit->appendPlainText(line);
+                if (line.contains("Verified OK")) {
+                    m_downloadFlag = DOWNLOAD_OK;
+                } else if (line.contains(("Programming Failed"))) {
+                }
+                emit downloadProcessChanged(m_step);
+            } else if (line.contains("Error")) {
+                m_downloadFlag = DOWNLOAD_FAILED;
+                emit downloadFaild();
+                ui->plainTextEdit->appendHtml(
+                    QString("<font color=\"red\";>Error:%1</font>").arg(line.mid(6)));
+            }
+        }
+    }
+    if (m_downloadFlag != DOWNLOAD_INIT) {
+        m_timerShowDownloadStatus->start(200);
+    }
+    //        if (successFlag) {
+    //            ui->plainTextEdit->appendHtml(
+    //                "<h2><font color=\"green\"; font-size=20;>烧录成功</font></h2>");
+    //        }
+    //    if (failedFlag) {
+    //    }
+}
 
-    //std_err
-    output = myprocess->readAllStandardError();
-    if (!output.isEmpty()) {
-        QString outputStr = QString::fromUtf8(output);
-        ui->plainTextEdit->appendPlainText(outputStr);
-    }
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    qDebug() << "windownClosed!";
 }
 
 void MainWindow::on_btnLoadFile_clicked()
 {
-    static QString fileNameLast;
+    static QString fileTypeLast;
+    QString fileType;
     QString fileName
         = QFileDialog::getOpenFileName(this,
                                        tr("Open File"),
                                        "",
                                        tr("bin文件 (*.bin);; elf文件(*.elf);;所有文件(*.*)"));
     if (!fileName.isEmpty()) {
-        ui->labFileInfo->setText(fileName);
         QFileInfo fileInfo(fileName);
-        m_fileName = fileInfo.suffix();
-        if (m_fileName != fileNameLast) {
-            fileNameLast = m_fileName;
+        m_fileName = fileName;
+
+        //文件大小
+        ui->labFileInfo->setText(fileName + "  " + QString::number(fileInfo.size() / 1024.0, 'f', 2)
+                                 + "KB");
+
+        fileType = fileInfo.suffix();
+        if (fileType != fileTypeLast) {
+            fileTypeLast = fileType;
             //发射信号 文件类型更改
-            emit filetypeTobeDownloadChanged(m_fileName);
+            emit filetypeTobeDownloadChanged(fileType);
         }
     } else {
     }
@@ -168,10 +221,14 @@ void MainWindow::on_btnDownLoad_clicked()
     QStringList arguments;
     arguments << "-f" << cfgInterfacePath << "-f" << TargetPath << "-c"
               << QString("program %1 %2 verify reset exit").arg(m_fileName).arg(m_binAddr);
+    QString argumentStr = arguments.join(" ");
     qDebug() << "Command:" << program;
     qDebug() << "arguments:" << arguments;
     qDebug() << "Working Directory:" << myprocess->workingDirectory();
-    QFileInfo checkFile(program);
+    //    ui->plainTextEdit->appendHtml(
+    //        QString("<p><font color=\"red\";>Command: </font>%1 %2</p>").arg(program).arg(argumentStr));
+    m_step = 0;
+    m_downloadFlag = DOWNLOAD_INIT;
     myprocess->start(program, arguments);
 }
 
@@ -183,12 +240,8 @@ void MainWindow::dealError(QProcess::ProcessError error)
 void MainWindow::on_combDebuggerType_currentTextChanged(const QString &arg1)
 {
     m_buggerCofigType = arg1.toLower() + ".cfg";
+    m_jsObj["debugerType"] = arg1;
     qDebug() << "m_buggerCofigFileName" << m_buggerCofigType;
-}
-
-void MainWindow::on_combMcuSelect_currentTextChanged(const QString &arg1)
-{
-    m_mcuType = arg1.toLower() + ".cfg";
 }
 
 void MainWindow::on_btnClearText_clicked()
@@ -226,6 +279,7 @@ void MainWindow::on_fileTypeChanged(QString fileType)
                                                  40,
                                                  QSizePolicy::Expanding,
                                                  QSizePolicy::Minimum);
+
         binAddrLayout->addWidget(labBinAddr);
         binAddrLayout->addWidget(editBinAddr);
         binAddrLayout->addItem(spaceItem);
@@ -239,4 +293,10 @@ void MainWindow::on_fileTypeChanged(QString fileType)
             deletelayout(binAddrLayout);
         }
     }
+}
+
+void MainWindow::on_combMcuSelect_currentIndexChanged(const QString &arg1)
+{
+    m_mcuType = arg1.toLower() + ".cfg";
+    m_jsObj["mcuType"] = arg1;
 }
